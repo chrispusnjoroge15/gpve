@@ -1,0 +1,22 @@
+[project]
+name = "gpve"
+version = "0.1.0"
+description = "Geometric Proof & Verification Engine - Multi-AI theorem prover with SMT, type theory, and geometric reasoning"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "z3-solver>=4.12",
+    "anthropic>=0.18",
+    "google-generativeai>=0.5",
+    "openai>=1.12",
+    "requests>=2.31",
+    "pydantic>=2.5",
+    "rich>=13.7",
+]
+
+[project.scripts]
+gpve = "gpve.cli:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

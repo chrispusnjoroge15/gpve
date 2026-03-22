@@ -1,0 +1,7 @@
+z3-solver>=4.12
+anthropic>=0.18
+google-generativeai>=0.5
+openai>=1.12
+requests>=2.31
+pydantic>=2.5
+rich>=13.7
