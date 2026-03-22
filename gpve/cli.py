@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from gpve import GPVEEngine, create_engine
 from gpve.core import ProofGraph, Vertex
-from gpve.visualize import visualize_proof, visualize_proof_paths
+from gpve.visualize import visualize_proof
 from gpve.config import get_api_keys
 
 
@@ -17,7 +17,6 @@ def cmd_engine(args):
     engine = create_engine()
     print(f"GPVE Engine initialized: {engine}")
     
-    # Quick demo
     engine.add_proposition("P")
     engine.add_proposition("Q")
     engine.add_proof_morphism("P", "Q", "proof_1")
@@ -29,7 +28,6 @@ def cmd_verify(args):
     """Verify a proof"""
     engine = create_engine()
     
-    # Build simple proof graph
     graph = ProofGraph("demo")
     v1 = graph.add_vertex("x > 0")
     v2 = graph.add_vertex("y > 0")
@@ -57,15 +55,31 @@ def cmd_ai_status(args):
         print(f"  {name.upper()}: {status}")
 
 
+def cmd_ai_query(args):
+    """Query AI providers"""
+    engine = create_engine()
+    
+    prompt = args.prompt or "What is the meaning of life in one sentence?"
+    print(f"Prompt: {prompt}")
+    print("-" * 40)
+    
+    responses = engine.ai.generate(prompt)
+    
+    for provider, response in responses.items():
+        print(f"\n{provider.value.upper()}:")
+        if response.error:
+            print(f"  Error: {response.error}")
+        else:
+            print(f"  {response.content[:200]}...")
+
+
 def cmd_sheaf(args):
     """Demonstrate sheaf-based reasoning"""
     engine = create_engine()
     
-    # Add local proofs
     engine.add_local_proof("U1", "P → Q", {"type": "lemma1"})
     engine.add_local_proof("U2", "Q → R", {"type": "lemma2"})
     
-    # Glue
     global_proof = engine.glue_local_proofs(["U1", "U2"])
     
     print(f"Sheaf Reasoning:")
@@ -77,17 +91,14 @@ def cmd_category(args):
     """Demonstrate category theory"""
     engine = create_engine()
     
-    # Add propositions
     engine.add_proposition("P")
     engine.add_proposition("Q")
     engine.add_proposition("R")
     
-    # Add proofs as morphisms
     engine.add_proof_morphism("P", "Q", "f")
     engine.add_proof_morphism("Q", "R", "g")
     engine.add_proof_morphism("P", "R", "h")
     
-    # Add equivalence
     engine.add_proof_equivalence("f∘g", "h", "associativity")
     
     is_equiv = engine.check_proof_equivalent("f∘g", "h")
@@ -134,6 +145,68 @@ def cmd_topology(args):
     print("Topology Analysis:")
     for k, v in analysis.items():
         print(f"  {k}: {v}")
+
+
+def cmd_smt(args):
+    """Run SMT solver demo"""
+    from gpve.core import SMTSolver
+    
+    print("SMT Solver Demo")
+    print("=" * 40)
+    
+    solver = SMTSolver()
+    x = solver.Int("x")
+    y = solver.Int("y")
+    
+    print("Constraints: x + y = 10, x > 0, y > 0")
+    
+    solver.assert_formula(x + y == 10)
+    solver.assert_formula(x > 0)
+    solver.assert_formula(y > 0)
+    
+    result = solver.check()
+    print(f"Result: {result.status}")
+    print(f"Model: {result.model}")
+
+
+def cmd_examples(args):
+    """Run example proofs"""
+    from gpve.examples import run_all_examples
+    run_all_examples()
+
+
+def cmd_test(args):
+    """Run unit tests"""
+    import unittest
+    
+    print("Running GPVE Tests")
+    print("=" * 40)
+    
+    # Discover and run tests
+    loader = unittest.TestLoader()
+    suite = unittest.TestSuite()
+    
+    # Load test modules
+    from tests.test_core import TestProofGraph, TestSMTSolver, TestProofKernel
+    from tests.test_geometric import TestSimplicialComplex, TestHomotopyDetector
+    from tests.test_modules import TestProofCategory, TestGPVEEngine
+    
+    suite.addTests(loader.loadTestsFromTestCase(TestProofGraph))
+    suite.addTests(loader.loadTestsFromTestCase(TestSMTSolver))
+    suite.addTests(loader.loadTestsFromTestCase(TestProofKernel))
+    suite.addTests(loader.loadTestsFromTestCase(TestSimplicialComplex))
+    suite.addTests(loader.loadTestsFromTestCase(TestHomotopyDetector))
+    suite.addTests(loader.loadTestsFromTestCase(TestProofCategory))
+    suite.addTests(loader.loadTestsFromTestCase(TestGPVEEngine))
+    
+    runner = unittest.TextTestRunner(verbosity=2)
+    result = runner.run(suite)
+    
+    print()
+    if result.wasSuccessful():
+        print("✅ All tests passed!")
+    else:
+        print("❌ Some tests failed")
 
 
 def cmd_all(args):
@@ -184,15 +257,33 @@ def cmd_all(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="GPVE - Geometric Proof & Verification Engine")
+    parser = argparse.ArgumentParser(
+        description="GPVE - Geometric Proof & Verification Engine",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  gpve all              Run full demo
+  gpve verify           Verify a proof
+  gpve smt              Run SMT solver
+  gpve test             Run unit tests
+  gpve examples         Run example proofs
+  gpve ai-status        Check AI API keys
+  gpve ai "prompt"      Query AI
+  gpve visualize        Visualize proof graph
+        """
+    )
+    
     subparsers = parser.add_subparsers(dest="command", help="Commands")
     
     # Core
     subparsers.add_parser("engine", help="Run GPVE engine demo")
     subparsers.add_parser("verify", help="Verify a proof")
+    subparsers.add_parser("smt", help="Run SMT solver demo")
     subparsers.add_parser("all", help="Run full demo")
     
     # AI
+    ai_parser = subparsers.add_parser("ai", help="Query AI providers")
+    ai_parser.add_argument("prompt", nargs="?", help="Prompt to send")
     subparsers.add_parser("ai-status", help="Check AI provider status")
     
     # Layers
@@ -204,12 +295,20 @@ def main():
     viz_parser = subparsers.add_parser("visualize", help="Visualize proof graph")
     viz_parser.add_argument("-f", "--format", choices=["dot", "mermaid", "json"], help="Format")
     
+    # Testing & Examples
+    subparsers.add_parser("test", help="Run unit tests")
+    subparsers.add_parser("examples", help="Run example proofs")
+    
     args = parser.parse_args()
     
     if args.command == "engine":
         cmd_engine(args)
     elif args.command == "verify":
         cmd_verify(args)
+    elif args.command == "smt":
+        cmd_smt(args)
+    elif args.command == "ai":
+        cmd_ai_query(args)
     elif args.command == "ai-status":
         cmd_ai_status(args)
     elif args.command == "sheaf":
@@ -220,6 +319,10 @@ def main():
         cmd_topology(args)
     elif args.command == "visualize":
         cmd_visualize(args)
+    elif args.command == "test":
+        cmd_test(args)
+    elif args.command == "examples":
+        cmd_examples(args)
     elif args.command == "all":
         cmd_all(args)
     else:
